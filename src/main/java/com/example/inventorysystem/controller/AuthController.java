@@ -1,9 +1,17 @@
 package com.example.inventorysystem.controller;
 
+import java.util.Map;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.example.inventorysystem.security.JwtUtils;
 import com.example.inventorysystem.service.UserService;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+
 
 @RestController
 @RequestMapping("/api/auth")
@@ -17,13 +25,16 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<String> register(@RequestParam String username,
-                                           @RequestParam String email,
-                                           @RequestParam String password,
-                                           @RequestParam String role) {
+    public ResponseEntity<String> register(@RequestBody Map<String, String> userDetails) {
+        String username = userDetails.get("username");
+        String email = userDetails.get("email");
+        String password = userDetails.get("password");
+        String role = userDetails.get("role");
+
         userService.registerUser(username, email, password, role);
         return ResponseEntity.ok("User registered successfully");
     }
+
 
     @PostMapping("/login")
     public ResponseEntity<String> login(@RequestParam String username,

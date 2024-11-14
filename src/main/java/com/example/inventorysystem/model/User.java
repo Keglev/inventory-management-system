@@ -8,6 +8,7 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@Table(name = "users") // Add this annotation to specify the table name
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -23,4 +24,5 @@ public class User {
     private String email;
 
     private String role; // e.g., "USER" or "ADMIN"
+    // Getters and setters (if not using Lombok)
 }
