@@ -6,7 +6,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.inventorysystem.security.JwtUtils;
@@ -37,9 +36,15 @@ public class AuthController {
 
 
     @PostMapping("/login")
-    public ResponseEntity<String> login(@RequestParam String username,
-                                        @RequestParam String password) {
-        String token = jwtUtils.generateToken(username);
-        return ResponseEntity.ok(token);
+    public ResponseEntity<String> login(@RequestBody Map<String, String> loginDetails) {
+        String username = loginDetails.get("username");
+        String password = loginDetails.get("password");
+    
+        if (userService.authenticateUser(username, password)) {
+            String token = jwtUtils.generateToken(username); // Generate JWT for the user
+            return ResponseEntity.ok(token); // Return the JWT token
+        } else {
+            return ResponseEntity.status(401).body("Invalid username or password");
+        }
     }
 }

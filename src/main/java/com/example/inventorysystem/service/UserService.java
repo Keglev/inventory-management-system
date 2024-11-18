@@ -30,4 +30,12 @@ public class UserService {
 
         return userRepository.save(user);
     }
+
+    // Authenticate the user
+    public boolean authenticateUser(String username, String rawPassword) {
+        return userRepository.findByUsername(username)
+                .map(user -> passwordEncoder.matches(rawPassword, user.getPassword())) // Check password
+                .orElse(false); // Return false if user not found
+    }
+
 }
