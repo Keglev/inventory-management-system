@@ -15,10 +15,11 @@ public class JwtUtils {
     private final Key jwtSecret = Keys.secretKeyFor(SignatureAlgorithm.HS512); // Generates a secure key
     private final int jwtExpirationMs = 3600000; // 1 hour
 
-    // Generate JWT token
-    public String generateToken(String username) {
+    // Generate JWT token with role
+    public String generateToken(String username, String role) {
         return Jwts.builder()
                 .setSubject(username)
+                .claim("role", role) // Include the user's role in the token
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(new Date().getTime() + jwtExpirationMs))
                 .signWith(jwtSecret, SignatureAlgorithm.HS512)
@@ -33,6 +34,16 @@ public class JwtUtils {
                 .parseClaimsJws(token)
                 .getBody();
         return claims.getSubject();
+    }
+
+    // Extract role from JWT token
+    public String getRoleFromToken(String token) {
+        Claims claims = Jwts.parserBuilder()
+                .setSigningKey(jwtSecret)
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+        return claims.get("role", String.class);
     }
 
     // Validate JWT token

@@ -26,11 +26,14 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http.csrf(csrf -> csrf.disable()) // Disable CSRF for stateless API
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**").permitAll() // Allow auth endpoints
-                .anyRequest().authenticated() // Protect all other endpoints
+                .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/api/suppliers/**").hasRole("ADMIN") // Ensure role-based access
+                .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class); // Add JWT filter
-
+    
         return http.build();
     }
+    
+    
 }

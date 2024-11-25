@@ -3,6 +3,8 @@ package com.example.inventorysystem.controller;
 import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
+import com.example.inventorysystem.model.User;
+
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -41,10 +43,12 @@ public class AuthController {
         String password = loginDetails.get("password");
     
         if (userService.authenticateUser(username, password)) {
-            String token = jwtUtils.generateToken(username); // Generate JWT for the user
-            return ResponseEntity.ok(token); // Return the JWT token
+            User user = userService.getUserByUsername(username); // Retrieve user details
+            String token = jwtUtils.generateToken(username, user.getRole()); // Pass role to generateToken
+            return ResponseEntity.ok(token);
         } else {
             return ResponseEntity.status(401).body("Invalid username or password");
         }
     }
+    
 }
