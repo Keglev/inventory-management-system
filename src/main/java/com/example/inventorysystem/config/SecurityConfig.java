@@ -27,13 +27,13 @@ public class SecurityConfig {
         http.csrf(csrf -> csrf.disable()) // Disable CSRF for stateless API
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers("/api/suppliers/**").hasRole("ADMIN") // Ensure role-based access
+                .requestMatchers("/api/orders/{id}/status").hasRole("ADMIN") // Allow only ADMIN
+                .requestMatchers("/api/orders/user/**").hasRole("ADMIN") // ADMIN can see other users' orders
+                .requestMatchers("/api/orders/**").hasAnyRole("USER", "ADMIN") // General access for valid users
                 .anyRequest().authenticated()
             )
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class); // Add JWT filter
-    
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+
         return http.build();
     }
-    
-    
 }

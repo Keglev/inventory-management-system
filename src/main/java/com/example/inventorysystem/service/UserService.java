@@ -42,4 +42,11 @@ public class UserService {
         return userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found: " + username));
     }
+
+    // **New Method** to get userId by username
+    public Long getUserIdByUsername(String username) {
+        return userRepository.findByUsername(username)
+                .map(User::getId) // Extract the ID from the User entity
+                .orElseThrow(() -> new RuntimeException("User not found: " + username));
+    }
 }

@@ -2,9 +2,11 @@ package com.example.inventorysystem.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import jakarta.persistence.Table;
 
 @Entity
 @Data
+@Table(name = "products")
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
