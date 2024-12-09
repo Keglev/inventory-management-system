@@ -2,7 +2,6 @@ package com.example.inventorysystem.model;
 
 import jakarta.persistence.*;
 import lombok.*;
-import jakarta.persistence.Table;
 
 @Entity
 @Data
@@ -22,8 +21,9 @@ public class Product {
     @Column(nullable = false)
     private Double price;
 
-    @Column(nullable = false)
-    private Integer minimumOrderQuantity;
+    // Add default value and allow null for backward compatibility
+    @Column(name = "minimum_order_quantity", nullable = true, columnDefinition = "INTEGER DEFAULT 1")
+    private Integer minimumOrderQuantity = 1;
 
     @Column(nullable = false)
     private Long supplierId; // Reference to Supplier

@@ -7,9 +7,11 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -90,20 +92,27 @@ public class OrderController {
         return ResponseEntity.status(201).body(orderDTO);
     }
 
-    @PreAuthorize("hasRole('ADMIN') or #userId == principal.userId")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<OrderDTO>> getOrdersByUserId(
+        public ResponseEntity<List<OrderDTO>> getOrdersByUserId(
         @PathVariable Long userId,
         @AuthenticationPrincipal UserDetails userDetails
-    ) {
-        String role = userService.getUserByUsername(userDetails.getUsername()).getRole();
+        ) {
+        // Fetch the requesting user's ID and role
         Long requestingUserId = userService.getUserByUsername(userDetails.getUsername()).getId();
+        String role = userService.getUserByUsername(userDetails.getUsername()).getRole();
 
+        // Restrict access: Admins can fetch any user's orders; Users can only fetch their own
+        if (!"ADMIN".equalsIgnoreCase(role) && !requestingUserId.equals(userId)) {
+            throw new AccessDeniedException("You do not have permission to view these orders.");
+        }
+
+        // Fetch and map orders to DTOs
         List<Order> orders = orderService.getOrdersByUserId(userId, role, requestingUserId);
         List<OrderDTO> orderDTOs = orders.stream().map(OrderMapper::toOrderDTO).collect(Collectors.toList());
+    return ResponseEntity.ok(orderDTOs);
+}
 
-        return ResponseEntity.ok(orderDTOs);
-    }
 
     @PreAuthorize("hasRole('ADMIN') or #userId == principal.userId")
     @GetMapping("/{id}")
@@ -142,4 +151,35 @@ public class OrderController {
 
         return ResponseEntity.ok(orderDTO);
     }
+    @PreAuthorize("hasRole('ADMIN') or #userId == principal.userId")
+    @DeleteMapping("/{id}")
+        public ResponseEntity<String> deleteOrder(@PathVariable Long id, 
+                                          @AuthenticationPrincipal UserDetails userDetails) {
+        logger.debug("Request to delete order ID: {}", id);
+
+        String role = userService.getUserByUsername(userDetails.getUsername()).getRole();
+        Long requestingUserId = userService.getUserByUsername(userDetails.getUsername()).getId();
+
+        orderService.deleteOrder(id, role, requestingUserId);
+
+        return ResponseEntity.ok("Order deleted successfully.");
+    }
+    @PreAuthorize("hasRole('ADMIN') or #userId == principal.userId")
+    @GetMapping("/history")
+        public ResponseEntity<List<OrderDTO>> getOrderHistory(
+        @RequestParam(required = false) Long userId, 
+        @AuthenticationPrincipal UserDetails userDetails
+        ) {
+            logger.debug("Fetching order history for user ID: {}", userId);
+
+        String role = userService.getUserByUsername(userDetails.getUsername()).getRole();
+        Long requestingUserId = userService.getUserByUsername(userDetails.getUsername()).getId();
+
+        List<Order> orders = orderService.getOrderHistory(userId, role, requestingUserId);
+        List<OrderDTO> orderDTOs = orders.stream()
+                                     .map(OrderMapper::toOrderDTO)
+                                     .collect(Collectors.toList());
+    return ResponseEntity.ok(orderDTOs);
+}
+
 }

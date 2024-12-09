@@ -59,8 +59,30 @@ public class OrderService {
     
     public Order updateOrderStatus(Long orderId, OrderStatus status, String adminComments) {
         Order order = getOrderById(orderId);
+        if (order == null) {
+            throw new IllegalArgumentException("Order not found with ID: " + orderId);
+        }
         order.setStatus(status);
-        order.setAdminComments(adminComments);
+        if (adminComments != null && !adminComments.trim().isEmpty()) {
+            order.setAdminComments(adminComments);
+        }
         return orderRepository.save(order);
     }
+    public void deleteOrder(Long orderId, String role, Long requestingUserId) {
+        Order order = getOrderById(orderId);
+    
+        if (!"ADMIN".equalsIgnoreCase(role) && !order.getUserId().equals(requestingUserId)) {
+            throw new AccessDeniedException("You are not authorized to delete this order.");
+        }
+        orderRepository.delete(order);
+    }
+    public List<Order> getOrderHistory(Long userId, String role, Long requestingUserId) {
+        if ("ADMIN".equalsIgnoreCase(role)) {
+            return userId == null ? orderRepository.findAll() : orderRepository.findByUserId(userId);
+        } else if (requestingUserId.equals(userId)) {
+            return orderRepository.findByUserId(userId);
+        } else {
+            throw new AccessDeniedException("You are not authorized to view this order history.");
+        }
+    }    
 }
