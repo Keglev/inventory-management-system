@@ -1,3 +1,5 @@
+// mvn test -Dspring-boot.test.context.debug=true
+
 package com.example.inventorysystem.service;
 
 import java.util.List;
@@ -22,6 +24,7 @@ import com.example.inventorysystem.model.Order;
 import com.example.inventorysystem.model.OrderItem;
 import com.example.inventorysystem.repository.OrderRepository;
 import com.example.inventorysystem.repository.ProductRepository;
+
 
 @ExtendWith(MockitoExtension.class)
 class OrderServiceTest {
@@ -115,7 +118,7 @@ class OrderServiceTest {
         Order order1 = new Order();
         order1.setId(1L);
         order1.setUserId(10L);
-
+       
         Order order2 = new Order();
         order2.setId(2L);
         order2.setUserId(10L);
@@ -123,7 +126,8 @@ class OrderServiceTest {
         when(orderRepository.findAll()).thenReturn(List.of(order1, order2));
 
         // Act
-        List<Order> orders = orderService.getOrderHistory(null, "ADMIN", 20L);
+        List<Order> orders = orderService.getOrderHistory(null, "ADMIN", 1L);
+
 
         // Assert
         assertNotNull(orders);

@@ -1,8 +1,11 @@
 package com.example.inventorysystem.service;
 
 import java.time.LocalDateTime;
+import java.util.EnumSet;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
@@ -18,6 +21,7 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
     private final ProductRepository productRepository;
+    private static final Logger log = LoggerFactory.getLogger(OrderService.class);
 
     public OrderService(OrderRepository orderRepository, ProductRepository productRepository) {
         this.orderRepository = orderRepository;
@@ -58,20 +62,24 @@ public class OrderService {
     }
     
     public Order updateOrderStatus(Long orderId, OrderStatus status, String adminComments) {
-        Order order = getOrderById(orderId);
-        if (order == null) {
-            throw new IllegalArgumentException("Order not found with ID: " + orderId);
+        if (status == null || !EnumSet.of(OrderStatus.PENDING, OrderStatus.APPROVED, OrderStatus.REJECTED).contains(status)) {
+            throw new IllegalArgumentException("Invalid order status: " + status);
         }
+
+        Order order = getOrderById(orderId);
         order.setStatus(status);
+
         if (adminComments != null && !adminComments.trim().isEmpty()) {
             order.setAdminComments(adminComments);
         }
         return orderRepository.save(order);
     }
     public void deleteOrder(Long orderId, String role, Long requestingUserId) {
+        log.debug("Attempting to delete order. Order ID: {}, Role: {}, User ID: {}", orderId, role, requestingUserId);
         Order order = getOrderById(orderId);
     
         if (!"ADMIN".equalsIgnoreCase(role) && !order.getUserId().equals(requestingUserId)) {
+            log.debug("Attempting to delete order. Order ID: {}, Role: {}, User ID: {}", orderId, role, requestingUserId);
             throw new AccessDeniedException("You are not authorized to delete this order.");
         }
         orderRepository.delete(order);

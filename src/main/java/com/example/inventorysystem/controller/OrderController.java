@@ -49,47 +49,50 @@ public class OrderController {
 
     @PostMapping
     public ResponseEntity<OrderDTO> createOrder(
-    @RequestBody List<OrderItemDTO> items,
-    @AuthenticationPrincipal UserDetails userDetails) {
+        @RequestBody OrderDTO orderDTO,
+        @AuthenticationPrincipal UserDetails userDetails) {
 
-    logger.debug("Received request body (raw items): {}", items);
+        logger.debug("Received request body (raw items): {}", orderDTO);
 
-    for (OrderItemDTO item : items) {
-        logger.debug("Checking existence for product ID: {}", item.getProductId());
+        // Validate OrderDTO fields
+        if (orderDTO.getUserId() == null || orderDTO.getItems() == null || orderDTO.getItems().isEmpty()) {
+            logger.error("Invalid OrderDTO: Missing userId or items");
+            throw new IllegalArgumentException("User ID and items cannot be null or empty.");
+        }
+
+        for (OrderItemDTO item : orderDTO.getItems()) {
+            logger.debug("Checking existence for product ID: {}", item.getProductId());
         
-        if (item.getPrice() == null || item.getQuantity() == null) {
-            logger.error("Price or quantity is null for product ID: {}", item.getProductId());
-            throw new IllegalArgumentException("Price and quantity cannot be null for product ID: " + item.getProductId());
+            if (item.getPrice() == null || item.getQuantity() == null) {
+                logger.error("Price or quantity is null for product ID: {}", item.getProductId());
+                throw new IllegalArgumentException("Price and quantity cannot be null for product ID: " + item.getProductId());
+            }
+            // Validate product existence
+            boolean exists = productRepository.existsById(item.getProductId());
+            logger.debug("Product ID {} existence: {}", item.getProductId(), exists);
+
+            if (!exists) {
+                logger.error("Invalid product ID: {}", item.getProductId());
+                throw new IllegalArgumentException("Invalid product ID: " + item.getProductId());
+            }
         }
 
-        // Validate product existence
-        boolean exists = productRepository.existsById(item.getProductId());
-        logger.debug("Product ID {} existence: {}", item.getProductId(), exists);
+        Long userId = orderDTO.getUserId();
+        logger.debug("Order is being created for user ID: {}", userId);
 
-        if (!exists) {
-            logger.error("Invalid product ID: {}", item.getProductId());
-            throw new IllegalArgumentException("Invalid product ID: " + item.getProductId());
-        }
-    }
+        // Map DTO to entities
+        List<OrderItem> orderItems = orderDTO.getItems().stream()
+            .map(OrderMapper::toOrderItem)
+            .collect(Collectors.toList());
 
-    logger.debug("Authenticated user: {}", userDetails.getUsername());
+        // Create the order
+        Order order = orderService.createOrder(userId, orderItems);
+        logger.debug("Order created successfully: {}", order);
 
-    Long userId = userService.getUserByUsername(userDetails.getUsername()).getId();
-    logger.debug("Resolved user ID: {}", userId);
+        // Convert to DTO for response
+        OrderDTO responseDTO = OrderMapper.toOrderDTO(order);
 
-    // Map DTO to entities
-    List<OrderItem> orderItems = items.stream()
-        .map(OrderMapper::toOrderItem)
-        .collect(Collectors.toList());
-
-    // Create the order
-    Order order = orderService.createOrder(userId, orderItems);
-    logger.debug("Order created: {}", order);
-
-    // Convert to DTO for response
-    OrderDTO orderDTO = OrderMapper.toOrderDTO(order);
-
-        return ResponseEntity.status(201).body(orderDTO);
+        return ResponseEntity.status(201).body(responseDTO);
     }
 
     @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
@@ -175,11 +178,19 @@ public class OrderController {
         String role = userService.getUserByUsername(userDetails.getUsername()).getRole();
         Long requestingUserId = userService.getUserByUsername(userDetails.getUsername()).getId();
 
+         // Debug role and requesting user ID
+        logger.debug("Role: {}, Requesting UserId: {}", role, requestingUserId);
+
         List<Order> orders = orderService.getOrderHistory(userId, role, requestingUserId);
+
+        // Debugging the fetched orders
+        logger.debug("Fetched Orders from Service: {}", orders);
         List<OrderDTO> orderDTOs = orders.stream()
                                      .map(OrderMapper::toOrderDTO)
                                      .collect(Collectors.toList());
+        logger.debug("Mapped OrderDTOs: {}", orderDTOs);
     return ResponseEntity.ok(orderDTOs);
-}
+
+    }
 
 }
