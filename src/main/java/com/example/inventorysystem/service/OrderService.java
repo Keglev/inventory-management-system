@@ -90,6 +90,7 @@ public class OrderService {
         } else if (requestingUserId.equals(userId)) {
             return orderRepository.findByUserId(userId);
         } else {
+            log.debug("Unauthorized access attempt by user {} to fetch orders for user {}", requestingUserId, userId);
             throw new AccessDeniedException("You are not authorized to view this order history.");
         }
     }    

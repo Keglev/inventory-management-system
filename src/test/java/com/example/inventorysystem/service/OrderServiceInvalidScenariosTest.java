@@ -1,3 +1,6 @@
+// mvn test -Dtest=OrderServiceInvalidScenariosTest
+// all tests passed
+
 package com.example.inventorysystem.service;
 
 import java.util.List;
@@ -103,12 +106,10 @@ class OrderServiceInvalidScenariosTest {
 
     @Test
     void testFetchOrderHistoryForUserByUnauthorizedUser() {
-        // Arrange
-        when(orderRepository.findByUserId(10L)).thenReturn(List.of());
 
         // Act & Assert
         assertThrows(org.springframework.security.access.AccessDeniedException.class, () ->
-                orderService.getOrderHistory(10L, "USER", 10L)); // User trying to fetch another user's orders
+                orderService.getOrderHistory(10L, "USER", 20L)); // User trying to fetch another user's orders
     }
 
     @Test

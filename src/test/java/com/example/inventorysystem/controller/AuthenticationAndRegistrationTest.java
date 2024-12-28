@@ -1,3 +1,6 @@
+// mvn test -Dtest=AuthenticationAndRegistrationTest
+// All tests passed
+
 package com.example.inventorysystem.controller;
 
 import org.junit.jupiter.api.Test;
@@ -6,9 +9,7 @@ import static org.mockito.Mockito.when;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -19,9 +20,8 @@ import com.example.inventorysystem.model.User;
 import com.example.inventorysystem.security.JwtUtils;
 import com.example.inventorysystem.service.UserService;
 
-@ContextConfiguration(classes = {TestSecurityConfig.class})
-@WebMvcTest(AuthController.class)
-@Import(TestSecurityConfig.class)
+@WebMvcTest(controllers = AuthController.class)
+@ContextConfiguration(classes = {AuthController.class, TestSecurityConfig.class}) 
 public class AuthenticationAndRegistrationTest {
 
     @Autowired
@@ -33,9 +33,6 @@ public class AuthenticationAndRegistrationTest {
     @MockBean
     private JwtUtils jwtUtils;
 
-    @MockBean
-    private PasswordEncoder passwordEncoder; // Include if PasswordEncoder is required
-
     @Test
     void testAuthenticateUser() throws Exception {
 
@@ -45,16 +42,14 @@ public class AuthenticationAndRegistrationTest {
                     "password": "password123"
                 }
                 """;
-         // Build a User object using the Lombok builder
-         User mockUser = User.builder()
-                             .username("user")
-                             .role("USER")
-                             .password("password123")
-                             .build();
 
         // Mock UserService authentication and user retrieval
         when(userService.authenticateUser("user", "password123")).thenReturn(true);
-        when(userService.getUserByUsername("user")).thenReturn(mockUser);
+        when(userService.getUserByUsername("user")).thenReturn(
+                User.builder()
+                    .username("user")
+                    .role("USER").build()
+        );
         when(jwtUtils.generateToken("user", "USER")).thenReturn("mock-jwt-token");
 
         mockMvc.perform(post("/api/auth/login")
@@ -71,6 +66,16 @@ public class AuthenticationAndRegistrationTest {
                     "password": "adminpassword"
                 }
                 """;
+
+        // Mock authentication and user retrieval
+        when(userService.authenticateUser("admin", "adminpassword")).thenReturn(true);
+        when(userService.getUserByUsername("admin")).thenReturn(
+                User.builder()
+                    .username("admin")
+                    .role("ADMIN")
+                    .build()
+        );
+    when(jwtUtils.generateToken("admin", "ADMIN")).thenReturn("mock-jwt-token");
 
         mockMvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -89,15 +94,13 @@ public class AuthenticationAndRegistrationTest {
                 }
                 """;
          // Mock the User object returned by UserService
-         User mockUser = User.builder()
-                             .username("newUser")
-                             .email("newuser@example.com")
-                             .password("password123")
-                             .role("USER")
-                             .build();
-
-        when(userService.registerUser(anyString(), anyString(), anyString(), anyString()))
-                        .thenReturn(mockUser); // Return the User object instead of true
+         when(userService.registerUser("newUser", "newuser@example.com", "password123", "USER"))
+            .thenReturn(User.builder()
+                            .username("newUser")
+                            .email("newuser@example.com")
+                            .password("password123")
+                            .role("USER")
+                            .build());
 
         mockMvc.perform(post("/api/auth/register")
                .contentType(MediaType.APPLICATION_JSON)

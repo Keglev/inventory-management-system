@@ -1,4 +1,5 @@
 // mvn test -Dspring-boot.test.context.debug=true
+// All Tests Passed
 
 package com.example.inventorysystem.service;
 

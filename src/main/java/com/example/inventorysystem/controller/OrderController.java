@@ -6,6 +6,7 @@ import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -101,17 +102,25 @@ public class OrderController {
         @PathVariable Long userId,
         @AuthenticationPrincipal UserDetails userDetails
         ) {
+            logger.debug("Fetching orders for userId: {}", userId);
+            logger.debug("Authenticated user: {}", userDetails.getUsername());
+            logger.debug("Invoked getOrdersByUserId with userId: {}", userId);
+
         // Fetch the requesting user's ID and role
         Long requestingUserId = userService.getUserByUsername(userDetails.getUsername()).getId();
         String role = userService.getUserByUsername(userDetails.getUsername()).getRole();
 
+        logger.debug("Requesting User ID: {}, Role: {}", requestingUserId, role);
+
         // Restrict access: Admins can fetch any user's orders; Users can only fetch their own
         if (!"ADMIN".equalsIgnoreCase(role) && !requestingUserId.equals(userId)) {
+            logger.warn("Access denied for User ID: {}", requestingUserId);
             throw new AccessDeniedException("You do not have permission to view these orders.");
         }
 
         // Fetch and map orders to DTOs
         List<Order> orders = orderService.getOrdersByUserId(userId, role, requestingUserId);
+        logger.debug("Orders fetched: {}", orders);
         List<OrderDTO> orderDTOs = orders.stream().map(OrderMapper::toOrderDTO).collect(Collectors.toList());
     return ResponseEntity.ok(orderDTOs);
 }
@@ -124,18 +133,33 @@ public class OrderController {
         @AuthenticationPrincipal UserDetails userDetails
     ) {
         logger.debug("Fetching order with ID: {}", id);
+        logger.debug("UserDetails: {}", userDetails);
 
         // Verify user permissions
         Order order = orderService.getOrderById(id);
+        if (order == null) { 
+            logger.warn("Order not found for ID: {}", id);
+            throw new OrderNotFoundException("Order not found " + id); 
+        }
+
         String role = userService.getUserByUsername(userDetails.getUsername()).getRole();
         Long requestingUserId = userService.getUserByUsername(userDetails.getUsername()).getId();
 
-        if (!"ADMIN".equalsIgnoreCase(role) && !order.getUserId().equals(requestingUserId)) {
-            throw new OrderNotFoundException("Order not found or access denied for order ID: " + id);
+        logger.debug("Requesting User: {}, Role: {}, Target Order User: {}", requestingUserId, role, order.getUserId());
+
+        if (order.getUserId() == null) {
+            logger.error("Order userId is null for order ID: {}", id);
+            throw new IllegalStateException("Invalid order data: userID is null");
         }
 
-        OrderDTO orderDTO = OrderMapper.toOrderDTO(order);
+        if (!"ROLE_ADMIN".equalsIgnoreCase(role) && !requestingUserId.equals(order.getUserId())) {
+            logger.warn("Access denied for user ID: {} on order ID: {}", requestingUserId, id);
+            throw new AccessDeniedException("Unauthorized to Access this order");
+        }
+        
 
+        OrderDTO orderDTO = OrderMapper.toOrderDTO(order);
+        logger.debug("Order fetched successfully for ID: {}", id); // Log successful order retrieval
         return ResponseEntity.ok(orderDTO);
     }
 
@@ -163,9 +187,14 @@ public class OrderController {
         String role = userService.getUserByUsername(userDetails.getUsername()).getRole();
         Long requestingUserId = userService.getUserByUsername(userDetails.getUsername()).getId();
 
-        orderService.deleteOrder(id, role, requestingUserId);
-
-        return ResponseEntity.ok("Order deleted successfully.");
+        try {
+            orderService.deleteOrder(id, role, requestingUserId);
+            return ResponseEntity.ok("Order deleted successfully.");
+        } catch (OrderNotFoundException e) {
+            logger.error("Order with ID {} not found", id);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Order not found.");
+        }
+        
     }
     @PreAuthorize("hasRole('ADMIN') or #userId == principal.userId")
     @GetMapping("/history")
